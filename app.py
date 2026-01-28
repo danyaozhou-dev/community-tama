@@ -1,66 +1,64 @@
 import streamlit as st
-import time
+from streamlit_autorefresh import st_autorefresh
+import random
 
-# --- 1. 32-BIT VISUAL STYLING ---
-st.set_page_config(page_title="COMMUNITY TAMA", page_icon="👾")
+# --- 1. ENGINE CONFIG ---
+st.set_page_config(page_title="TAMA ENGINE", layout="centered")
+# Refresh the "Engine" every 2 seconds to move the pet
+st_autorefresh(interval=2000, key="gameloop")
 
 st.markdown("""
     <style>
-    .stApp { background-color: #0d1117; color: #58a6ff; font-family: 'Courier New', monospace; }
-    .console-border {
-        border: 8px solid #30363d;
-        padding: 20px;
-        background-color: #161b22;
-        border-radius: 15px;
-        text-align: center;
-        box-shadow: 0 0 20px #58a6ff;
+    .stApp { background-color: #222; display: flex; justify-content: center; }
+    .tama-shell {
+        background: linear-gradient(145deg, #33ccff, #0066ff); /* Blue Shell */
+        border: 8px solid #000; border-radius: 120px 120px 100px 100px;
+        width: 400px; padding: 50px 30px; text-align: center; box-shadow: 15px 15px 0px #000;
     }
-    .pixel-text { color: #39FF14; text-shadow: 2px 2px #000; }
+    .tama-screen {
+        background-color: #99ad88; border: 6px solid #444;
+        height: 300px; position: relative; overflow: hidden; /* Canvas for movement */
+        box-shadow: inset 4px 4px 0px #000;
+    }
+    .pet-sprite {
+        position: absolute;
+        transition: all 1.5s ease-in-out; /* Smooth movement animation */
+        font-size: 50px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. MULTIPLAYER GLOBAL STATE ---
-# In a real app, this would be a database. 
-# For now, we use session_state (Shared per server instance)
+# --- 2. ENGINE STATE (Memory) ---
 if 'xp' not in st.session_state:
     st.session_state.xp = 0
-if 'hunger' not in st.session_state:
-    st.session_state.hunger = 100
+    st.session_state.pos = [100, 100] # Initial X, Y
 
-# --- 3. THE GAME UI ---
-st.markdown('<div class="console-border">', unsafe_allow_html=True)
-st.markdown('<h1 class="pixel-text">📟 MULTIPLAYER TAMA</h1>', unsafe_allow_html=True)
+# --- 3. ENGINE LOGIC (The Loop) ---
+# Randomly move the pet every refresh
+st.session_state.pos[0] = random.randint(10, 250) # Random X
+st.session_state.pos[1] = random.randint(10, 180) # Random Y
 
-# Evolution System
-if st.session_state.xp < 50:
-    st.image("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Y1bTh6bmIzeHpxbmR6bmIzeHpxbmR6bmIzeHpxbmR6bmIzeHpxJmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1z/3o7TKMGpxxX5F3K3Vm/giphy.gif", width=250)
-    st.subheader("STAGE: 🥚 BIT-EGG")
-elif st.session_state.xp < 200:
-    st.image("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Y1bTh6bmIzeHpxbmR6bmIzeHpxbmR6bmIzeHpxbmR6bmIzeHpxJmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1z/l41lTjJ8z8z8z8z8z8/giphy.gif", width=250)
-    st.subheader("STAGE: 👾 NEON-KID")
-else:
-    st.image("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Y1bTh6bmIzeHpxbmR6bmIzeHpxbmR6bmIzeHpxbmR6bmIzeHpxJmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1z/3o7TKVUn7iM8FMEU24/giphy.gif", width=300)
-    st.subheader("STAGE: 👑 OMEGA-BYTE")
+# --- 4. THE HANDHELD DISPLAY ---
+st.markdown('<div class="tama-shell">', unsafe_allow_html=True)
+st.markdown(f'''
+    <div class="tama-screen">
+        <div class="pet-sprite" style="left:{st.session_state.pos[0]}px; top:{st.session_state.pos[1]}px;">
+            👾
+        </div>
+    </div>
+''', unsafe_allow_html=True)
 
-# Stats Bars
-st.write(f"**COMMUNITY XP:** {st.session_state.xp}")
-st.progress(min(st.session_state.xp / 300, 1.0))
-st.write(f"**HUNGER:** {st.session_state.hunger}%")
+# GROWTH LOGIC
+stage = "EGG" if st.session_state.xp < 50 else "TEEN" if st.session_state.xp < 200 else "GOD"
+st.write(f"**{stage}** | XP: {st.session_state.xp}")
+
+# --- 5. MINI-GAME: REFLEX CATCH ---
+st.markdown("### 🕹️ MINI-GAME")
+if st.button("🎯 CATCH PET!"):
+    # If you click while it moves, you get XP
+    st.session_state.xp += 15
+    st.success("GOTCHA! +15 XP")
+    if st.session_state.xp % 50 == 0:
+        st.balloons()
+
 st.markdown('</div>', unsafe_allow_html=True)
-
-# --- 4. CONTROLS ---
-st.divider()
-c1, c2 = st.columns(2)
-with c1:
-    if st.button("🍎 FEED TAMA"):
-        st.session_state.xp += 5
-        st.session_state.hunger = min(100, st.session_state.hunger + 10)
-        st.toast("Yum! +5 XP")
-with c2:
-    if st.button("🎮 PLAY GAME"):
-        st.session_state.xp += 15
-        st.session_state.hunger = max(0, st.session_state.hunger - 5)
-        st.snow()
-
-# --- 5. BGM ---
-st.audio("https://www.soundjay.com/free-music/sounds/iron-man-01.mp3")
